@@ -5,9 +5,7 @@ Chinese guide: [README.zh-CN.md](README.zh-CN.md)
 This skill manages the full lifecycle of a Python numerical/ML experiment project
 with a coding agent. The agent scans the project once, injects confirmed
 hyperparameters, runs wall-clock-aligned experiments against a fixed baseline,
-stops bad runs early, reports, and micro-tunes small parameters. It is an
-independent project under the [VeryMath](https://github.com/VeryMath)
-organization.
+stops bad runs early, reports, and micro-tunes small parameters.
 
 ## Scope
 
@@ -237,9 +235,8 @@ Add this package directory to `skills.paths` in `opencode.json`:
 
 ## License and provenance
 
-This package is released under the MIT License; see `LICENSE`. It is an
-independent project under the VeryMath organization. The demo's dependency on
-PyTorch does not vendor or relicense PyTorch code.
+This package is released under the MIT License; see `LICENSE`. The demo's
+dependency on PyTorch does not vendor or relicense PyTorch code.
 
 The 2D Poisson example (`examples/demo_poisson/`) adapts the problem setup and
 the ParticleWNN method from
