@@ -2,11 +2,11 @@
 
 English guide: [README.md](README.md)
 
-这个 AI4Math skill 让编码 agent 管理 Python 数值/机器学习实验项目的全生命周期。
+这个 skill 让编码 agent 管理 Python 数值/机器学习实验项目的全生命周期。
 agent 只扫描项目一次，注入已确认的超参数，在固定基线上做等墙钟实验对比，及早停止
-劣质实验，生成报告，并对小参数做微调。它目前是
-[`VeryMath/AI4Math-Optimization`](https://github.com/VeryMath/AI4Math-Optimization)
-的发布就绪本地候选；只有目标仓库接受并合并后，才能称为官方上游 package。
+劣质实验，生成报告，并对小参数做微调。它是
+[VeryMath](https://github.com/VeryMath) 组织下的一个独立项目，不属于
+AI4Math-Optimization 技能库。
 
 ## 适用范围
 
@@ -213,13 +213,13 @@ NEMS_RUN_INTEGRATION=1 python -m unittest tests.test_demo_pipeline -v
 
 ## 许可证与来源边界
 
-在维护者授权并被上游接受后，本 package 预期沿用 AI4Math 仓库的 MIT license。demo
-依赖 PyTorch，但本 package 不打包、也不重新许可 PyTorch 代码。
+本 package 采用 MIT license（见 `LICENSE`）。它是 VeryMath 组织下的独立项目，不属于
+AI4Math-Optimization 技能库。demo 依赖 PyTorch，但本 package 不打包、也不重新许可
+PyTorch 代码。
 
 二维 Poisson 算例（`examples/demo_poisson/`）的问题设定与 ParticleWNN 方法改编自
 [`yaohua32/Physics-Driven-Deep-Learning-for-PDEs`](https://github.com/yaohua32/Physics-Driven-Deep-Learning-for-PDEs)
 （Apache-2.0）。**未复制上游代码**：`main.py`、`particle_wnn.py`、`traditional_solver.py`
 是对同一数学问题的独立重写。
 
-公开发布前，人类维护者必须确认发布授权，并如实记录贡献者署名；AI agent 完成打包不能
-替代这项授权。
+公开发布时应如实记录贡献者署名；Poisson 算例的来源见上文。

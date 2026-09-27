@@ -2,14 +2,12 @@
 
 Chinese guide: [README.zh-CN.md](README.zh-CN.md)
 
-This AI4Math skill manages the full lifecycle of a Python numerical/ML
-experiment project with a coding agent. The agent scans the project once, injects
-confirmed hyperparameters, runs wall-clock-aligned experiments against a fixed
-baseline, stops bad runs early, reports, and micro-tunes small parameters. It is
-a release-ready local candidate for
-[`VeryMath/AI4Math-Optimization`](https://github.com/VeryMath/AI4Math-Optimization);
-it is not an official upstream package until that repository accepts and merges
-it.
+This skill manages the full lifecycle of a Python numerical/ML experiment project
+with a coding agent. The agent scans the project once, injects confirmed
+hyperparameters, runs wall-clock-aligned experiments against a fixed baseline,
+stops bad runs early, reports, and micro-tunes small parameters. It is an
+independent project under the [VeryMath](https://github.com/VeryMath)
+organization and is not part of the AI4Math-Optimization skills library.
 
 ## Scope
 
@@ -239,9 +237,10 @@ Add this package directory to `skills.paths` in `opencode.json`:
 
 ## License and provenance
 
-This package is intended to follow the AI4Math repository's MIT license after
-maintainer authorization and upstream acceptance. The demo's dependency on
-PyTorch does not vendor or relicense PyTorch code.
+This package is released under the MIT License; see `LICENSE`. It is an
+independent project under the VeryMath organization and is not part of the
+AI4Math-Optimization skills library. The demo's dependency on PyTorch does not
+vendor or relicense PyTorch code.
 
 The 2D Poisson example (`examples/demo_poisson/`) adapts the problem setup and
 the ParticleWNN method from
@@ -250,6 +249,5 @@ the ParticleWNN method from
 and `traditional_solver.py` are independent re-implementations of the same
 mathematics.
 
-Before public release, a human maintainer must confirm publication authorization
-and record factual contributor attribution; packaging by an AI agent is not that
-authorization.
+Attribution for the adapted Poisson problem setup is recorded above; contributors
+must be named factually in public releases.
