@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Demo sandboxes and generated run outputs (never commit)
+.demo_workspace/
+.nems/
+*.pth
+*.mat
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
