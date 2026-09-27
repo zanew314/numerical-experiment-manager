@@ -1,4 +1,0 @@
-interface:
-  display_name: "AI Numerical Experiment Manager"
-  short_description: "Manage wall-clock numerical experiments against a baseline"
-  default_prompt: "Use $numerical-experiment-manager to scan this Python project, save its model structure, confirm its hyperparameters, choose a loss-stream source, and run a wall-clock baseline experiment with early stopping."

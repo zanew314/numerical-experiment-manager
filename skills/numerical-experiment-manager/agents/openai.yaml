@@ -1,0 +1,4 @@
+interface:
+  display_name: "Numerical Experiment Manager"
+  short_description: "Version a project's structure and run wall-clock experiments"
+  default_prompt: "Use $numerical-experiment-manager to version this Python project's structure, then run and monitor an experiment against a fixed baseline with early stopping."
