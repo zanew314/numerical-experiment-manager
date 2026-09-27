@@ -16,3 +16,6 @@ __pycache__/
 .DS_Store
 .idea/
 .vscode/
+
+# Local agent instructions (machine-specific paths; never publish)
+AGENTS.md
