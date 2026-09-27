@@ -1,37 +1,122 @@
-# AI 数值实验管理器 Skill
+<div align="center">
 
-English guide: [README.md](README.md)
+# 数值实验管理器
 
-这个 skill 让编码 agent 管理 Python 数值/机器学习实验项目的全生命周期。
-agent 只扫描项目一次，注入已确认的超参数，在固定基线上做等墙钟实验对比，及早停止
-劣质实验，生成报告，并对小参数做微调。
+面向 Python 数值与机器学习实验的可复现墙钟管理：一次扫描、确认后的超参数注入、
+固定基线对比、至多一次重训的早停、报告与微调。
 
-## 适用范围
+[English](README.md) · [贡献者](CONTRIBUTORS.md) · [能力](#能力) · [安装](#安装) · [快速开始](#快速开始) · [许可证与边界](#许可证与边界)
 
-使用本 skill 处理能够记录“每个 epoch 的墙钟 loss”的 Python 项目。交互步骤由 agent
-在对话中完成；`agent/` 下的模块是 agent 调用的确定性工具，不是独立 CLI。
+![version](https://img.shields.io/badge/version-0.1.0-blue)
+![modules](https://img.shields.io/badge/modules-11-2ea44f)
+![license](https://img.shields.io/badge/license-MIT-green)
 
-支持：
+</div>
 
-- 一次性的 LLM 结构摘要，以及模型更新后的增量 diff；
-- 不复制函数体即可保存模型结构的快照（AST 骨架 + 可选 torch.fx 图）；
-- 超参数的确认、注入与结构化历史；
-- 按相同经过秒数对齐的墙钟基线对比；
-- 早停，以及至多一次自动重训；
-- 针对不写 `loss_time.jsonl` 的程序的 loss 流适配器；
-- 单实验与整体报告、`INDEX.md` 与演化图；
-- 带保留/回退结论的小参数自动微调。
+<p align="center">
+  如果这个项目对你有帮助，欢迎为仓库点 Star ⭐
+  <a href="https://github.com/zanew314/numerical-experiment-manager"><img alt="GitHub stars" src="https://img.shields.io/github/stars/zanew314/numerical-experiment-manager?style=social"></a>
+</p>
 
-不要把 Julia、MATLAB、非 Python 或纯文档任务路由到本 package。被管理的程序应写出
-`loss_time.jsonl`；若不能，则用 loss 流适配器读取它运行时的输出（见下文）。
+## 这个仓库是什么
 
-## 依赖与隔离安装
+本仓库是数值实验管理器（Numerical Experiment Manager）的所在地，一个面向
+实验型 Python 项目的 agent 原生 skill package。它把编码 agent 变成可复现的实验
+管理器：agent 只扫描项目一次，注入已确认的超参数，在固定基线上做等墙钟实验对比，
+及早停止明显劣质的运行，生成报告，并对小参数做微调。
 
-- Python 3.10+
-- agent 工具需要 `numpy`；demo 需要 `torch`（CPU）与 `matplotlib`
-- 无外部 LLM SDK：远程调用使用 `urllib`，没有 API key 时分析器回退到确定性离线模式
+本 skill 是**agent 原生**的。交互步骤（确认超参数、批准实验、批准微调）由编码
+agent 在对话中完成；`agent/` 下的 Python 模块是 agent 调用的确定性工具，负责备份、
+注入、子进程执行、墙钟对齐、报告与历史维护，并不是独立 CLI。
 
-创建隔离环境并安装测试依赖：
+把每一次记录下来的对比都当作证据。在相同墙钟时间下比较 **best-so-far** 误差，保留原始
+`loss_time.jsonl`，绝不用一个看起来合理的摘要替换真实测量。
+
+以下情况请路由到别处：项目不是 Python（Julia、MATLAB 不在范围内）；程序完全无法产出
+可用的每次运行输出（没有 `loss_time.jsonl`、没有可解析的 stdout、没有 sidecar 文件）；
+或任务只是文档、打包，没有实验要运行。
+
+## 能力
+
+| 能力 | 用途 | 入口 |
+| --- | --- | --- |
+| 项目扫描 | 一次性 LLM 结构摘要与候选超参数。 | `agent/code_reader.py`、`agent/llm_analyzer.py` |
+| 模型结构 | 不复制函数体的 AST 骨架，可选附加 `torch.fx` 图。 | `agent/model_structure.py` |
+| 注入 | 备份源码、确认参数并注入 `get_param(...)`。 | `agent/hyperparameter_injector.py` |
+| loss 流 | 读取 `jsonl`、`stdout_regex`、`sidecar`、`completion_only` 或自定义来源。 | `agent/loss_stream.py` |
+| 基线与运行 | 在固定基线上做等墙钟运行，支持一次重训。 | `agent/experiment_runner.py` |
+| 早停 | 逐秒 best-so-far 比较与触发类型分类。 | `agent/early_stopper.py` |
+| 分析 | 在相同墙钟下比较实验、基线与历史。 | `agent/result_analyzer.py` |
+| 报告 | 写出 `REPORT.md`、`INDEX.md`、`BASELINE_REPORT.md` 与图表。 | `agent/report_generator.py` |
+| 微调 | 至多调整 3 个小参数，给出保留/回退结论。 | `agent/param_tuner.py` |
+| 历史 | 维护 `.nems/history.json` 与实验索引。 | `agent/history_manager.py` |
+
+随附资源：
+
+| 路径 | 内容 |
+| --- | --- |
+| [`SKILL.md`](SKILL.md) | 面向 agent 的工作流与批准规则。 |
+| `prompts/` | agent 填充的 LLM 提示模板。 |
+| `references/` | 早停、超参数、模型结构、loss 流方法说明。 |
+| `scripts/` | 轻依赖的 JSON 命令行检查。 |
+| `examples/` | 三个自包含的 CPU 演示。 |
+| `tests/` | 不依赖 pytest 的 `unittest` 测试套件。 |
+
+## 安装
+
+推荐使用 AI 辅助安装：让编码 agent 克隆或更新本仓库、读取 Skill 说明、安装入口并
+验证可发现性。
+
+```text
+请为我安装 Numerical Experiment Manager Skill。
+
+仓库：https://github.com/zanew314/numerical-experiment-manager.git
+分支：main
+Skill 路径：
+- .（仓库根目录包含 SKILL.md）
+
+步骤：
+1. 本地 clone 或更新仓库。
+2. 读取 README.md、SKILL.md，以及 AGENTS.md（如果存在）。
+3. 如果当前环境支持本地 Skill discovery，把包含 SKILL.md 的目录链接到本地 skills 目录。
+4. 如果某个 Skill 依赖相邻的共享支持目录，请保留这些 sibling 目录。
+5. 验证安装后的 Skill 可被发现。
+6. 告诉我安装路径、是否需要重启，并给我一个测试 prompt。
+```
+
+opencode 与 Codex 风格的本地 discovery 手动回退：
+
+```bash
+git clone https://github.com/zanew314/numerical-experiment-manager.git
+cd numerical-experiment-manager
+
+# opencode skill 目录
+mkdir -p ~/.config/opencode/skill
+ln -s "$PWD" ~/.config/opencode/skill/numerical-experiment-manager
+
+# Codex 风格本地 discovery
+mkdir -p ~/.codex/skills
+ln -s "$PWD" ~/.codex/skills/numerical-experiment-manager
+```
+
+Windows 上用 junction 代替 symlink：
+
+```powershell
+New-Item -ItemType Junction -Path "$env:USERPROFILE\.config\opencode\skill\numerical-experiment-manager" -Target "E:\path\to\numerical-experiment-manager"
+```
+
+如果你的 agent 使用别的本地 Skill 目录，请把上面的路径换成对应配置路径。若要通过
+`opencode.json` 注册，把本目录加入 `skills.paths`：
+
+```json
+{
+  "skills": {
+    "paths": ["skills"]
+  }
+}
+```
+
+运行演示前，创建隔离环境并安装测试依赖：
 
 ```bash
 python3 -m venv .venv-nems
@@ -43,9 +128,11 @@ python -m pip install -r requirements-test.txt
 
 ## 快速开始
 
-在本 package 目录运行自包含、仅 CPU 的演示（远低于三分钟）：
+克隆仓库并运行自包含、仅 CPU 的演示（远低于三分钟）：
 
 ```bash
+git clone https://github.com/zanew314/numerical-experiment-manager.git
+cd numerical-experiment-manager
 python examples/demo_mlp_sin/run_demo.py
 ```
 
@@ -61,21 +148,15 @@ python examples/demo_mlp_sin/run_demo.py --workspace D:\tmp\nems_demo
 预期结果：
 
 - `exp_001`（LR=0.01）完成，并相对基线 **improved**；
-- `exp_002_earlystop`（LR=10.0）在单次重训也失败后被判为 **early stopped** 并记录；
+- `exp_002_earlystop`（LR=10.0）在单次重训也失败后被判为 **early stopped**；
 - 模型更新只重读变化的 `main.py`，写出 `project_summary_diff.md`，未变字段标注
   `unchanged (see exp_001)`。
-
-demo 每次运行都会重建沙箱，因此重复运行会覆盖 `.demo_workspace`（已 gitignore，不提交
-任何运行产物）。
 
 第二个更短的 demo 管理一个**没有** `loss_time.jsonl`、只打印进度的项目：
 
 ```bash
 python examples/demo_no_stream/run_demo.py
 ```
-
-它会写出 `.nems/model_structure.json`/`.md`、供 `stdout_regex` 源使用的
-`.nems/stream_adapter.json`、基线、一次正常实验与一次早停实验，以及常规报告。
 
 一个科学算例用三种方法求解二维 Poisson 问题 `-Delta u = f`（精确解
 `u* = sin(freq x1) sin(freq x2)`，`freq = pi`）：`main.py` 是 PINN，
@@ -87,9 +168,8 @@ python examples/demo_poisson/traditional_solver.py --n 127
 python examples/demo_poisson/particle_wnn.py
 ```
 
-有限差分参考解以二阶收敛（`n=127` 时 L2 相对误差约 `2e-4`）；管理器随后在固定
-基线上运行 PINN 实验，demo 也会直接运行 ParticleWNN。详见
-`examples/demo_poisson/PROBLEM.md`。
+有限差分参考解以二阶收敛（`n=127` 时 L2 相对误差约 `2e-4`）；管理器随后在固定基线上
+运行 PINN 实验。详见 `examples/demo_poisson/PROBLEM.md`。
 
 ## 接入合同
 
@@ -110,19 +190,8 @@ agent 的早停器会用 `sqrt` 把记录的 `loss` 转成 RMSE 形式的误差�
 记录非负 loss。生成的适配模块读取 `.nems/current_config.json`，文件缺失时回退到源码
 默认值，因此项目仍可独立运行。
 
-## 模型结构快照
-
-`agent/model_structure.py` 在不复制函数体的前提下保存“模型是什么”。它始终用标准库
-AST 生成骨架（import、常量、类基类、方法签名、`self.<layer> = Module(...)` 赋值），
-写入 `.nems/model_structure.json` 与 `.nems/model_structure.md`。当 PyTorch 可用且能提供
-模型实例与示例输入时，`augment_with_torch_fx` 会附加带形状与参数量的算子图；追踪是
-尽力而为，失败也不会影响骨架。`diff_model_structures` 比较两份快照，用于增量摘要。
-详见 `references/model_structure_methods.md`。
-
-## loss 流适配器
-
-当程序不写 `loss_time.jsonl` 时，在 `.nems/stream_adapter.json` 里选择来源（或给
-`ExperimentRunner.run` 传 `stream_spec=`）：
+当程序不写 `loss_time.jsonl` 时，在 `.nems/stream_adapter.json` 里选择 loss 来源
+（或给 `ExperimentRunner.run` 传 `stream_spec=`）：
 
 | type | 读取 | 实时 |
 | --- | --- | --- |
@@ -154,33 +223,33 @@ AST 生成骨架（import、常量、类基类、方法签名、`self.<layer> = 
   `_nems_config.py`。
 - 小参数微调默认至多 3 个参数、每个至多 2 个取值。
 
-### LLM 配置
+## 仓库结构
 
-编码 agent 是主 LLM。若要让 Python 工具调用 OpenAI 兼容端点，设置：
-
-```bash
-NEMS_LLM_API_KEY=...
-NEMS_LLM_BASE_URL=https://api.openai.com/v1   # 可选
-NEMS_LLM_MODEL=gpt-4o-mini                    # 可选
+```text
+numerical-experiment-manager/
+├── README.md
+├── README.zh-CN.md
+├── SKILL.md
+├── CONTRIBUTORS.md
+├── LICENSE
+├── pyproject.toml
+├── requirements-test.txt
+├── agent/
+├── prompts/
+├── references/
+├── scripts/
+├── examples/
+│   ├── demo_mlp_sin/
+│   ├── demo_no_stream/
+│   └── demo_poisson/
+└── tests/
 ```
 
-没有 key 时，`LLMAnalyzer` 使用离线回退并设置 `_source = "offline_fallback"`。
-
-## 命令行入口
-
-两个确定性、轻依赖脚本支撑平台式检查与 agent 工作流：
-
-```bash
-python scripts/check_environment.py        # JSON：必需/可选依赖
-python scripts/analyze_project.py <dir>    # JSON：离线结构 + 超参数
-```
-
-两者都向 stdout 输出单个 JSON 文档；`analyze_project.py` 输入非法时以退出码 `2` 向
-stderr 输出 JSON 错误。
+请把演示、生成的运行证据与 `.nems/` 状态放在所属项目内；运行产物已 gitignore，不提交。
 
 ## 验证
 
-在本 package 目录运行：
+本仓库无根级构建步骤。在本 package 目录运行：
 
 ```bash
 python -m unittest discover -s tests -p "test_*.py"
@@ -188,35 +257,29 @@ python -m unittest discover -s tests -p "test_*.py"
 
 端到端 demo 测试为可选，会跑完整生命周期：
 
-```bash
+```powershell
 # PowerShell
 $env:NEMS_RUN_INTEGRATION="1"; python -m unittest tests.test_demo_pipeline -v
+```
+
+```bash
 # bash
 NEMS_RUN_INTEGRATION=1 python -m unittest tests.test_demo_pipeline -v
 ```
 
-被跳过的集成测试不能作为发布证据；公开发布前请运行可选测试。
+`Validate skill` GitHub Actions 工作流在 Python 3.10 与 3.13 上运行零跳过的轻依赖测试，
+随后用 CPU PyTorch 跑完整套件。被跳过的集成测试不能作为发布证据；公开发布前请运行
+可选测试。
 
-## 注册
+## 许可证与边界
 
-把本 package 目录加入 `opencode.json` 的 `skills.paths`：
+本 package 采用 MIT License（见 `LICENSE`）。不要提交求解器 license、API key、私有
+数据集、`.env` 文件、含敏感数据的生成日志或本地运行输出。公开示例应包含 benchmark
+数据来源说明，并确保可以再分发。
 
-```json
-{
-  "skills": {
-    "paths": ["skills"]
-  }
-}
-```
-
-## 许可证与来源边界
-
-本 package 采用 MIT license（见 `LICENSE`）。demo 依赖 PyTorch，但本 package 不打包、
-也不重新许可 PyTorch 代码。
-
-二维 Poisson 算例（`examples/demo_poisson/`）的问题设定与 ParticleWNN 方法改编自
+demo 依赖 PyTorch，但本 package 不打包、也不重新许可 PyTorch 代码。二维 Poisson 算例
+（`examples/demo_poisson/`）的问题设定与 ParticleWNN 方法改编自
 [`yaohua32/Physics-Driven-Deep-Learning-for-PDEs`](https://github.com/yaohua32/Physics-Driven-Deep-Learning-for-PDEs)
 （Apache-2.0）。**未复制上游代码**：`main.py`、`particle_wnn.py`、`traditional_solver.py`
-是对同一数学问题的独立重写。
-
-公开发布时应如实记录贡献者署名；Poisson 算例的来源见上文。
+是对同一数学问题的独立重写。署名记录在 [`CONTRIBUTORS.md`](CONTRIBUTORS.md)；公开发布时
+应如实记录贡献者。
