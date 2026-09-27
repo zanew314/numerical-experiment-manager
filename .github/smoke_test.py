@@ -13,7 +13,7 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SCRIPTS = ROOT / "skills" / "numerical-experiment-manager" / "scripts"
+SCRIPTS = ROOT / "scripts"
 
 
 def run(script: str, *args: str) -> dict:
