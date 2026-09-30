@@ -11,8 +11,8 @@ permissions:
   contents: read
 
 jobs:
-  smoke:
-    name: Structure scripts (standard library only)
+  test:
+    name: Scripts and tests (standard library only)
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -26,6 +26,8 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Compile the scripts
-        run: python -m py_compile skills/numerical-experiment-manager/scripts/*.py
+        run: python -m py_compile scripts/*.py
+      - name: Run the unit tests
+        run: python -m unittest discover -s tests -v
       - name: Run the smoke test
         run: python .github/smoke_test.py

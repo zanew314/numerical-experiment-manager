@@ -22,9 +22,18 @@ project_root/
     │       ├── early_stop.json     # decision + trigger_kind, when stopped
     │       ├── run.log             # captured stdout/stderr
     │       └── REPORT.md
+    ├── testset/
+    │   ├── index.json              # selected cards/cases for workflow C
+    │   ├── summary.json            # grouped aggregation of the cases
+    │   └── <case_id>/
+    │       ├── case.json           # materialized equation instance
+    │       ├── loss_time.jsonl     # short per-case run curve
+    │       ├── metrics.json
+    │       └── result.json
     ├── reports/
     │   ├── v0001_summary.md
-    │   └── v0001_to_v0002_change.md
+    │   ├── v0001_to_v0002_change.md
+    │   └── diagnosis_<tag>.md      # workflow C model diagnosis
     └── figures/
         ├── dataflow_v0002.md       # Mermaid
         └── dataflow_v0002.dot      # Graphviz
@@ -106,3 +115,18 @@ imports, module-level constants, and `self.<attr> = ...` assignments.
 - `REPORT.md` is generated from the fill-in prompt, never fabricated numbers.
 
 Keep the run id short and sortable, e.g. `run_001`, `run_002`.
+
+## `testset/` (workflow C)
+
+- `testset/index.json` (optional) lists the selected cards and `cases` so
+  `aggregate` can report any case that was planned but never ran.
+- `testset/<case_id>/case.json` is the materialized equation instance; the field
+  contract is in `references/testset.md`.
+- `testset/<case_id>/loss_time.jsonl` and `metrics.json` are per-case evidence,
+  identical in shape to a `runs/<run_id>/` run.
+- `testset/summary.json` is the grouped reduction (by `group` and by each
+  `difficulty` axis) written by `python scripts/testset.py aggregate`.
+- `reports/diagnosis_<tag>.md` is generated from `prompts/model_diagnosis.md`.
+
+`.nems/testset/` is generated evidence, never source, and is gitignored with the
+rest of `.nems/`.

@@ -4,12 +4,13 @@
 
 A guidance-first skill for reproducible Python numerical/ML experiments: versioned
 structure tracking, torch.fx data flow, wall-clock baseline comparison, early
-stopping, and small-parameter tuning.
+stopping, small-parameter tuning, and an in-skill test-equation bank for diagnosing
+where a model is weak.
 
 [中文说明](README.zh-CN.md) · [Contributors](CONTRIBUTORS.md) · [Workflows](#workflows) · [Scripts](#scripts) · [Installation](#installation) · [License and scope](#license-and-scope)
 
 ![version](https://img.shields.io/badge/version-0.1.0-blue)
-![scripts](https://img.shields.io/badge/scripts-4-2ea44f)
+![scripts](https://img.shields.io/badge/scripts-5-2ea44f)
 ![license](https://img.shields.io/badge/license-MIT-green)
 
 </div>
@@ -23,7 +24,7 @@ stopping, and small-parameter tuning.
 
 This repository **is** the skill. It teaches a coding agent to manage a Python
 numerical/ML experiment project as a reproducible campaign. The guidance lives in
-[`SKILL.md`](SKILL.md); four small, dependency-free scripts do the deterministic
+[`SKILL.md`](SKILL.md); five small, dependency-free scripts do the deterministic
 bookkeeping. There is no standalone pipeline — the agent drives every interactive
 step in conversation.
 
@@ -33,6 +34,7 @@ step in conversation.
 | --- | --- | --- |
 | A. Structure versioning | project first seen, or the model file changes | An AST snapshot is versioned (`v0001`, `v0002`, …); the author's structural edits become versions; after a run, the structural diff and metrics are handed to the LLM to explain the performance change. |
 | B. Automated testing | the user says "帮我测试" / "run this" | The program runs, its data flow is optionally traced with `torch.fx`, a precise structure diagram and experiment report are produced, the run is early-stopped if its relative error stays above 0.10, and a few small parameters can be tuned. |
+| C. Equation-bank diagnosis | the user asks where the model is weak | Test equations are generated from the in-skill Markdown bank, adapted to the model's input format, run for a few short iterations each, aggregated by family and difficulty, and turned into a diagnosis with advisory structural suggestions. |
 
 Evidence discipline: preserve the raw loss series, compare **best-so-far** at
 equal wall-clock, and never replace a measurement with a plausible summary.
@@ -45,6 +47,7 @@ equal wall-clock, and never replace a measurement with a plausible summary.
 | [`scripts/diff_structure.py`](scripts/diff_structure.py) | Structural diff between two versions → JSON for the LLM. |
 | [`scripts/fx_dataflow.py`](scripts/fx_dataflow.py) | `torch.fx` trace → Mermaid/DOT data-flow diagram + shapes. |
 | [`scripts/watch_experiment.py`](scripts/watch_experiment.py) | Run a program, record wall-clock loss, early-stop, retrain once, write run artifacts. |
+| [`scripts/testset.py`](scripts/testset.py) | List the equation cards, validate a case, aggregate per-case runs into a grouped summary. |
 
 ## Quick Start
 
@@ -69,6 +72,11 @@ python scripts/watch_experiment.py /path/to/project --run-id baseline \
 python scripts/watch_experiment.py /path/to/project --run-id run_001 \
     --cmd "python main.py" --baseline .nems/baseline/loss_time.jsonl \
     --tolerance 0.10 --sustain 3
+
+# 5. Diagnose on the equation bank: list cards, materialize cases, aggregate.
+python scripts/testset.py list
+python scripts/testset.py scaffold poisson-2d --out .nems/testset/poisson-2d/case.json
+python scripts/testset.py aggregate /path/to/project --testset .nems/testset
 ```
 
 Then fill [`prompts/structure_diff.md`](prompts/structure_diff.md) and
@@ -84,7 +92,8 @@ Everything durable is written under `.nems/` at the managed project root:
 ├── structure/   # index.json + vNNNN.json/md (versioned AST snapshots)
 ├── baseline/    # fixed wall-clock baseline curve
 ├── runs/<id>/   # loss_time.jsonl, metrics.json, early_stop.json, REPORT.md
-├── reports/     # vNNNN_summary.md, vNNNN_to_vNNNN_change.md
+├── testset/     # index.json, summary.json, <case_id>/case.json + run artifacts
+├── reports/     # vNNNN_summary.md, *_change.md, diagnosis_<tag>.md
 └── figures/     # dataflow_*.md/dot
 ```
 

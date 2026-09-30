@@ -1,4 +1,5 @@
 # Optional extras for the demos and for torch.fx data-flow tracing.
-# The four scripts under scripts/ need only the Python standard library.
+# The five scripts under scripts/ (including testset.py) need only the Python
+# standard library.
 torch>=1.10
 matplotlib>=3.5

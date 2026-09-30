@@ -7,9 +7,13 @@ description: >-
   runs the program, traces its data flow with torch.fx, draws a precise structure
   diagram, produces an experiment report, early-stops a run whose relative error
   stays above 0.10 (a local-optimum signature), and micro-tunes small parameters.
+  It also generates test equations from an in-skill Markdown equation bank,
+  adapts them to the model's input format, runs a few short iterations per
+  equation, and diagnoses which equation classes the model handles poorly.
   Use when a numerical, scientific-computing, or machine-learning project needs
   structure/version management, reproducible wall-clock experiments, early
-  stopping against a baseline, or small-parameter tuning driven by a coding agent
+  stopping against a baseline, small-parameter tuning, or equation-bank model
+  diagnosis driven by a coding agent
   (opencode, Codex, Claude Code). Do not use for Julia or MATLAB projects, for
   pure documentation tasks, or as a standalone command-line pipeline.
 ---
@@ -22,7 +26,7 @@ interactive steps; a handful of small, dependency-free scripts under `scripts/`
 do the deterministic bookkeeping. This document is the source of truth — prefer
 it over any script's own help text.
 
-Two workflows are in scope:
+Three workflows are in scope:
 
 - **Structure versioning** — read a project once, keep a versioned structure JSON,
   and whenever the author edits the numerical-experiment model, assign a new
@@ -32,6 +36,10 @@ Two workflows are in scope:
   its data flow with `torch.fx`, run experiments against a fixed baseline,
   early-stop a run that looks trapped in a local optimum, write a report, and
   micro-tune a few small parameters.
+- **Equation-bank diagnosis** — generate test equations from the in-skill
+  Markdown bank (`references/test_equations/`), adapt each to the model's input
+  format, run a few short iterations per equation, and report which equation
+  classes the model handles poorly; improvements are advisory only.
 
 Everything durable is written under `.nems/` at the managed project root. Never
 commit `.nems/` outputs; they are evidence, not source.
@@ -51,7 +59,7 @@ measurement with a plausible-looking summary.
 
 ## Workflow
 
-The agent decides which workflow to enter from the user's intent. Both workflows
+The agent decides which workflow to enter from the user's intent. The workflows
 share the `.nems/` layout in `references/artifacts.md`.
 
 ### A. Structure versioning (project management)
@@ -140,6 +148,53 @@ plan first (see *Approval rules*).
    changes through this path; demonstrate those as an explicit source edit plus a
    new structure version.
 
+### C. Equation-bank diagnosis
+
+Trigger when the user wants to know where the model is weak ("看看模型哪里不行",
+"test it on some equations"). Confirm the plan first (see *Approval rules*).
+
+1. **List the bank.** Read `references/test_equations/INDEX.md` and run:
+
+   ```bash
+   python scripts/testset.py list
+   ```
+
+   Each card is one equation family; `group` is `general` (small solvable
+   problems) or `pde` (space-time / operator-learning problems).
+
+2. **Match the interface.** Read the structure snapshot (workflow A) plus the
+   model's source and identify its problem-description interface. Select only
+   the cards whose `input_format` (see *Input encoding* in the card's
+   `## Expected Modeling Signals`) fits the model. Record skipped cards as
+   coverage gaps.
+
+3. **Materialize cases.** Instantiate each selected card into a concrete case at
+   `.nems/testset/<case_id>/case.json`; start from
+   `python scripts/testset.py scaffold <card_id> --out <case.json>` and fill the
+   placeholders from the card and the model interface. See
+   `references/testset.md` for the field contract.
+
+4. **Run short.** Run each case with `watch_experiment.py` under a small,
+   bounded wall clock (default `--max-wall-clock 60`), writing artifacts under
+   `.nems/testset/<case_id>/`. Run at most 6 cases by default.
+
+5. **Aggregate.** Reduce the runs to grouped numbers:
+
+   ```bash
+   python scripts/testset.py aggregate <project_root> --testset .nems/testset \
+       --output .nems/testset/summary.json
+   ```
+
+6. **Diagnose.** Read `prompts/model_diagnosis.md`, fill it with the aggregated
+   summary, the detected interface, and the structure snapshot, and write
+   `.nems/reports/diagnosis_<tag>.md`. List the weak equation classes and the
+   structural hypotheses for them.
+
+7. **Suggest, do not apply.** Improvements are **advisory only** here. Never edit
+   the model source in workflow C. If the user wants a change, make it an
+   explicit source edit under workflow A (a new structure version), then re-run
+   the affected cases to check whether the weakness moved.
+
 ## Early stop
 
 The stopper answers "at equal wall-clock, is this run clearly not worth the
@@ -174,6 +229,12 @@ each `loss` to an RMSE-style error with `sqrt`, so the program must log a
 non-negative loss. When the program cannot write `loss_time.jsonl`, choose a loss
 source instead.
 
+For workflow C, the program may also read `NEMS_TESTCASE_FILE` (a path to a
+`case.json`). This is an optional convention, not a requirement: prefer whatever
+problem-description interface the model already exposes, and pass the case path
+through that interface first. Adding the env-var hook to the source requires
+approval.
+
 ## Approval rules
 
 - Show the plan and config before every experiment; get approval first.
@@ -183,6 +244,9 @@ source instead.
 - Early stop defaults to `tolerance = 0.10`, `sustain = 3` seconds.
 - Retrain at most once.
 - Micro-tune at most 3 parameters, at most 2 candidate values each.
+- Workflow C: run at most 6 cases by default, each with a bounded wall clock
+  (default 60 s); show the selected cards and commands before running.
+- Workflow C improvements are advisory only — never edit the model source there.
 
 ## Scripts
 
@@ -192,10 +256,13 @@ source instead.
 | `scripts/diff_structure.py` | Structural diff between two versions → JSON for the LLM. |
 | `scripts/fx_dataflow.py` | Optional `torch.fx` trace → Mermaid/DOT data-flow diagram + tables. |
 | `scripts/watch_experiment.py` | Run a program, record wall-clock loss, early-stop, write run artifacts. |
+| `scripts/testset.py` | List the equation cards, validate a case, and aggregate per-case runs into one summary. |
 
 ## References
 
 - `references/artifacts.md` — the `.nems/` contract and versioning scheme.
 - `references/early_stop_and_tuning.md` — stop rules, retrain, and tuning.
 - `references/torch_fx_dataflow.md` — when and how to trace data flow.
-- `prompts/` — fill-in prompts for scan, diff, and report.
+- `references/testset.md` — the equation-bank case contract, running, and aggregation.
+- `references/test_equations/` — the equation bank: `INDEX.md` plus one card per family.
+- `prompts/` — fill-in prompts for scan, diff, report, and `model_diagnosis.md`.

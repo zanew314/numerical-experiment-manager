@@ -75,3 +75,10 @@ Mark each result `keep` (better or equal at equal wall-clock) or `revert`
 (worse). Never route architecture changes through this path; make those an
 explicit source edit that creates a new structure version (workflow A), then test
 it with workflow B.
+
+## Workflow C short runs
+
+Workflow C reuses this same stopper for each test-equation case, but with a small
+bounded budget: `--max-wall-clock 60` (default) and at most 6 cases. The
+comparison is still best-so-far at equal wall-clock. Aggregate the per-case
+results with `python scripts/testset.py aggregate`; see `references/testset.md`.
